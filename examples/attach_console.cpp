@@ -9,6 +9,7 @@
 
 #include "cpp-terminal/color.hpp"
 #include "cpp-terminal/exception.hpp"
+#include "cpp-terminal/iostream.hpp"
 #include "cpp-terminal/style.hpp"
 #include "cpp-terminal/version.hpp"
 

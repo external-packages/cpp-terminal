@@ -23,7 +23,7 @@ try
   if(0 == m_counter)
   {
     static const Private::FileInitializer files_init;
-    new(&Term::terminal) Terminal();
+    if(nullptr == (new(&Term::terminal) Terminal())) { throw Term::Exception("new(&Term::terminal) Terminal()"); }
   }
   ++m_counter;
 }

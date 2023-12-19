@@ -12,14 +12,14 @@
 namespace Term
 {
 
-Term::Arguments::Arguments() {}
+Term::Arguments::Arguments() noexcept {}
 
-Term::Argc::Argc() {}
+Term::Argc::Argc() noexcept {}
 
-Term::Argc::operator unsigned int() { return static_cast<unsigned int>(Term::Arguments::argc()); }
+Term::Argc::operator std::size_t() { return Term::Arguments::argc(); }
 
-Term::Argc::operator unsigned int() const { return static_cast<unsigned int>(Term::Arguments::argc()); }
+Term::Argc::operator std::size_t() const { return Term::Arguments::argc(); }
 
-std::string Term::Arguments::operator[](const std::size_t& arg) const { return m_args[arg]; }
+std::string Term::Arguments::operator[](const std::size_t& arg) const { return m_args.at(arg); }
 
 }  // namespace Term

@@ -22,4 +22,6 @@ extern TOstream& clog;
 
 static const IOStreamInitializer IO_stream_initializer;  //NOLINT(cert-err58-cpp,fuchsia-statically-constructed-objects)
 
+class TStyle;
+
 }  // namespace Term

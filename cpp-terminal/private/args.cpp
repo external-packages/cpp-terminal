@@ -9,8 +9,6 @@
 
 #include "cpp-terminal/args.hpp"
 
-#include <ios>
-
 #if defined(_WIN32)
   #include <memory>
 // clang-format off
@@ -27,7 +25,7 @@
   #include <limits>
 #endif
 
-void Term::Arguments::parse()
+void Term::Arguments::parse() noexcept
 {
   if(m_parsed) { return; }
 #if defined(_WIN32)
@@ -78,13 +76,13 @@ void Term::Arguments::parse()
 #endif
 }
 
-std::size_t Term::Arguments::argc()
+std::size_t Term::Arguments::argc() noexcept
 {
   parse();
   return m_args.size();
 }
 
-std::vector<std::string> Term::Arguments::argv()
+std::vector<std::string> Term::Arguments::argv() noexcept
 {
   parse();
   return m_args;

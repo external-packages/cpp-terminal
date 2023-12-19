@@ -27,10 +27,10 @@ try
   {
     static const std::ios_base::Init       iostreams_init;  // Init std::cout etc...
     static const Term::TerminalInitializer terminal_init;   // Make sure terminal is set up.
-    new(&Term::cout) TOstream(Term::Buffer::Type::FullBuffered, BUFSIZ);
-    new(&Term::clog) TOstream(Term::Buffer::Type::LineBuffered, BUFSIZ);
-    new(&Term::cerr) TOstream(Term::Buffer::Type::Unbuffered, 0);
-    new(&Term::cin) TIstream(Term::Buffer::Type::FullBuffered, BUFSIZ);
+    if(nullptr == (new(&Term::cout) TOstream(Term::Buffer::Type::FullBuffered, BUFSIZ))) { throw Term::Exception("new(&Term::terminal) Terminal()"); }
+    if(nullptr == (new(&Term::clog) TOstream(Term::Buffer::Type::LineBuffered, BUFSIZ))) { throw Term::Exception("new(&Term::terminal) Terminal()"); }
+    if(nullptr == (new(&Term::cerr) TOstream(Term::Buffer::Type::Unbuffered, 0))) { throw Term::Exception("new(&Term::terminal) Terminal()"); }
+    if(nullptr == (new(&Term::cin) TIstream(Term::Buffer::Type::FullBuffered, BUFSIZ))) { throw Term::Exception("new(&Term::terminal) Terminal()"); }
     if(is_stdin_a_tty()) { std::cin.rdbuf(Term::cin.rdbuf()); }
   }
   ++m_counter;

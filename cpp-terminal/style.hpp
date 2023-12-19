@@ -9,9 +9,8 @@
 
 #pragma once
 
-#include "cpp-terminal/iostream.hpp"
-
 #include <cstdint>
+#include <ostream>
 #include <string>
 
 namespace Term
@@ -93,8 +92,6 @@ enum class Style : std::uint8_t
 
 std::string style(const Term::Style& style);
 
-template<class Stream> Stream& operator<<(Stream& stream, const Term::Style& style_type) { return stream << style(style_type); }
-// unabigify operator overload
-inline Term::TOstream&         operator<<(Term::TOstream& term, const Term::Style& style_type) { return term << style(style_type); }
+inline std::ostream& operator<<(std::ostream& stream, const Term::Style& style_type) { return stream << style(style_type); }
 
 }  // namespace Term
