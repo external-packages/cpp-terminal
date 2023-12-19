@@ -19,7 +19,6 @@
 #include "cpp-terminal/screen.hpp"
 #include "cpp-terminal/style.hpp"
 #include "cpp-terminal/terminal.hpp"
-#include "cpp-terminal/terminal_initializer.hpp"
 #include "cpp-terminal/tty.hpp"
 
 #include <cstdarg>
@@ -74,9 +73,9 @@ private:
 class erow
 {
 public:
-  int            idx{0};
-  int            size{0};
-  int            rsize{0};
+  std::size_t    idx{0};
+  std::size_t    size{0};
+  std::size_t    rsize{0};
   char*          chars{nullptr};
   char*          render{nullptr};
   unsigned char* hl{nullptr};
@@ -100,7 +99,7 @@ public:
   }
   std::size_t  cx{0};
   std::size_t  cy{0};
-  int          rx{0};
+  std::size_t  rx{0};
   std::size_t  rowoff{0};
   std::size_t  coloff{0};
   std::size_t  screenrows{0};
@@ -153,7 +152,7 @@ void editorUpdateSyntax(erow* row)
   int in_string  = 0;
   int in_comment = (row->idx > 0) && (E.row[row->idx - 1].hl_open_comment != 0);
 
-  size_t i = 0;
+  std::size_t i{0};
   while(i < static_cast<size_t>(row->rsize))
   {
     char          c       = row->render[i];
@@ -259,7 +258,7 @@ void editorUpdateSyntax(erow* row)
     }
 
     prev_sep = is_separator(c);
-    i++;
+    ++i;
   }
 
   int changed          = (row->hl_open_comment != in_comment);
@@ -305,9 +304,9 @@ void editorSelectSyntaxHighlight()
 
 /*** row operations ***/
 
-int editorRowCxToRx(erow* row, int cx)
+std::size_t editorRowCxToRx(erow* row, const std::size_t& cx)
 {
-  int rx = 0;
+  std::size_t rx{0};
   for(std::size_t j = 0; j < cx; ++j)
   {
     if(row->chars[j] == '\t') { rx += (KILO_TAB_STOP - 1) - (rx % KILO_TAB_STOP); }
@@ -316,32 +315,31 @@ int editorRowCxToRx(erow* row, int cx)
   return rx;
 }
 
-int editorRowRxToCx(erow* row, int rx)
+std::size_t editorRowRxToCx(erow* row, const std::size_t& rx)
 {
-  int cur_rx = 0;
-  int cx{};
+  std::size_t cur_rx{0};
+  std::size_t cx{0};
   for(cx = 0; cx < row->size; cx++)
   {
-    if(row->chars[cx] == '\t') cur_rx += (KILO_TAB_STOP - 1) - (cur_rx % KILO_TAB_STOP);
-    cur_rx++;
-
-    if(cur_rx > rx) return cx;
+    if(row->chars[cx] == '\t') { cur_rx += (KILO_TAB_STOP - 1) - (cur_rx % KILO_TAB_STOP); }
+    ++cur_rx;
+    if(cur_rx > rx) { return cx; }
   }
   return cx;
 }
 
 void editorUpdateRow(erow* row)
 {
-  int tabs = 0;
-  for(int j = 0; j < row->size; j++)
-    if(row->chars[j] == '\t') tabs++;
+  std::size_t tabs{0};
+  for(std::size_t j = 0; j < row->size; ++j)
+    if(row->chars[j] == '\t') ++tabs;
 
   free(row->render);
   row->render = reinterpret_cast<char*>(malloc(static_cast<size_t>(row->size + tabs * (KILO_TAB_STOP - 1) + 1)));
   if(row->render == nullptr) { exit(-1); /*TODO: create better check*/ }
 
-  int idx = 0;
-  for(int j = 0; j < row->size; j++)
+  std::size_t idx{0};
+  for(std::size_t j = 0; j < row->size; j++)
   {
     if(row->chars[j] == '\t')
     {
@@ -356,14 +354,14 @@ void editorUpdateRow(erow* row)
   editorUpdateSyntax(row);
 }
 
-void editorInsertRow(int at, const char* s, std::size_t len)
+void editorInsertRow(const std::size_t& at, const char* s, const std::size_t& len)
 {
-  if(at < 0 || at > E.numrows) return;
+  if(at > E.numrows) { return; }
 
   E.row = reinterpret_cast<erow*>(realloc(E.row, sizeof(erow) * (static_cast<size_t>(E.numrows) + 1)));
   if(E.row == nullptr) { exit(-1); /*TODO: create better check*/ }
   memmove(&E.row[at + 1], &E.row[at], sizeof(erow) * (static_cast<size_t>(E.numrows) - at));
-  for(int j = at + 1; j <= E.numrows; j++) E.row[j].idx++;
+  for(std::size_t j = at + 1; j <= E.numrows; j++) E.row[j].idx++;
 
   E.row[at].idx = at;
 
@@ -394,29 +392,30 @@ void editorFreeRow(erow* row)
   free(row->hl);
 }
 
-void editorDelRow(int at)
+void editorDelRow(const std::size_t& at)
 {
-  if(at < 0 || at >= E.numrows) return;
+  if(at >= E.numrows) { return; }
   editorFreeRow(&E.row[at]);
   memmove(&E.row[at], &E.row[at + 1], sizeof(erow) * (static_cast<size_t>(E.numrows) - at - 1));
-  for(int j = at; j < E.numrows - 1; j++) E.row[j].idx--;
-  E.numrows--;
+  for(std::size_t j = at; j < E.numrows - 1; j++) E.row[j].idx--;
+  --E.numrows;
   E.dirty = true;
 }
 
-void editorRowInsertChar(erow* row, int at, int c)
+void editorRowInsertChar(erow* row, const std::size_t& at, int c)
 {
-  if(at < 0 || at > row->size) at = row->size;
+  std::size_t att{at};
+  if(att > row->size) { att = row->size; }
   row->chars = reinterpret_cast<char*>(realloc(row->chars, static_cast<size_t>(row->size) + 2));
   if(row->chars == nullptr) { exit(-1); /*TODO: create better check*/ }
-  memmove(&row->chars[at + 1], &row->chars[at], static_cast<size_t>(row->size) - at + 1);
-  row->size++;
-  row->chars[at] = static_cast<char>(c);
+  memmove(&row->chars[att + 1], &row->chars[att], static_cast<size_t>(row->size) - att + 1);
+  ++row->size;
+  row->chars[att] = static_cast<char>(c);
   editorUpdateRow(row);
   E.dirty = true;
 }
 
-void editorRowAppendString(erow* row, char* s, std::size_t len)
+void editorRowAppendString(erow* row, char* s, const std::size_t& len)
 {
   row->chars = reinterpret_cast<char*>(realloc(row->chars, static_cast<size_t>(row->size) + len + 1));
   if(row->chars == nullptr) { exit(-1); /*TODO: create better check*/ }
@@ -427,11 +426,11 @@ void editorRowAppendString(erow* row, char* s, std::size_t len)
   E.dirty = true;
 }
 
-void editorRowDelChar(erow* row, int at)
+void editorRowDelChar(erow* row, const std::size_t& at)
 {
-  if(at < 0 || at >= row->size) return;
+  if(at >= row->size) { return; }
   memmove(&row->chars[at], &row->chars[at + 1], static_cast<size_t>(row->size) - at);
-  row->size--;
+  --row->size;
   editorUpdateRow(row);
   E.dirty = true;
 }
@@ -442,12 +441,12 @@ void editorInsertChar(const Term::Key& key)
 {
   if(E.cy == E.numrows) { editorInsertRow(E.numrows, "", 0); }
   editorRowInsertChar(&E.row[E.cy], E.cx, key);
-  E.cx++;
+  ++E.cx;
 }
 
 void editorInsertNewline()
 {
-  if(E.cx == 0) { editorInsertRow(E.cy, "", 0); }
+  if(0 == E.cx) { editorInsertRow(E.cy, "", 0); }
   else
   {
     erow* row = &E.row[E.cy];
@@ -463,21 +462,21 @@ void editorInsertNewline()
 
 void editorDelChar()
 {
-  if(E.cy == E.numrows) return;
-  if(E.cx == 0 && E.cy == 0) return;
+  if(E.cy == E.numrows) { return; }
+  if(E.cx == 0 && E.cy == 0) { return; }
 
   erow* row = &E.row[E.cy];
   if(E.cx > 0)
   {
     editorRowDelChar(row, E.cx - 1);
-    E.cx--;
+    --E.cx;
   }
   else
   {
     E.cx = E.row[E.cy - 1].size;
     editorRowAppendString(&E.row[E.cy - 1], row->chars, static_cast<size_t>(row->size));
     editorDelRow(E.cy);
-    E.cy--;
+    --E.cy;
   }
 }
 
@@ -556,14 +555,14 @@ void editorFindCallback(std::string& query, const Term::Key& key)
     saved_hl = nullptr;
   }
 
-  if(key == Term::Key::Enter || key == Term::Key::Esc)
+  if((key == Term::Key::Enter) || (key == Term::Key::Esc))
   {
     last_match = -1;
     direction  = 1;
     return;
   }
-  else if(key == Term::Key::ArrowRight || key == Term::Key::ArrowDown) { direction = 1; }
-  else if(key == Term::Key::ArrowLeft || key == Term::Key::ArrowUp) { direction = -1; }
+  if((key == Term::Key::ArrowRight) || (key == Term::Key::ArrowDown)) { direction = 1; }
+  else if((key == Term::Key::ArrowLeft) || (key == Term::Key::ArrowUp)) { direction = -1; }
   else
   {
     last_match = -1;
@@ -572,11 +571,11 @@ void editorFindCallback(std::string& query, const Term::Key& key)
 
   if(last_match == -1) direction = 1;
   int current = last_match;
-  for(int i = 0; i < E.numrows; i++)
+  for(std::size_t i = 0; i < E.numrows; i++)
   {
     current += direction;
     if(current == -1) { current = E.numrows - 1; }
-    else if(current == E.numrows) { current = 0; }
+    else if(static_cast<std::size_t>(current) == E.numrows) { current = 0; }
 
     erow* row   = &E.row[current];
     char* match = strstr(row->render, query.c_str());
@@ -630,15 +629,15 @@ void editorScroll()
 
 void editorDrawRows(std::string& screen)
 {
-  for(int y = 0; y < E.screenrows; y++)
+  for(std::size_t y = 0; y < E.screenrows; y++)
   {
-    int filerow = y + E.rowoff;
+    std::size_t filerow = y + E.rowoff;
     if(filerow >= E.numrows)
     {
       if(E.numrows == 0 && y == E.screenrows / 3)
       {
-        char welcome[80];
-        int  welcomelen = snprintf(welcome, sizeof(welcome), "Kilo editor -- version %s", KILO_VERSION.c_str());
+        char        welcome[80];
+        std::size_t welcomelen = snprintf(welcome, sizeof(welcome), "Kilo editor -- version %s", KILO_VERSION.c_str());
         if(welcomelen > E.screencols) welcomelen = E.screencols;
         int padding = (E.screencols - welcomelen) / 2;
         if(padding)
@@ -653,14 +652,12 @@ void editorDrawRows(std::string& screen)
     }
     else
     {
-      int len = E.row[filerow].rsize - E.coloff;
-      if(len < 0) len = 0;
+      std::size_t len = (E.row[filerow].rsize - E.coloff) > 0 ? E.row[filerow].rsize - E.coloff : 0;
       if(len > E.screencols) len = E.screencols;
       char*          c             = &E.row[filerow].render[E.coloff];
       unsigned char* hl            = &E.row[filerow].hl[E.coloff];
       Term::Color    current_color = Term::Color::Name::Black;  // black is not used in editorSyntaxToColor
-      int            j;
-      for(j = 0; j < len; j++)
+      for(std::size_t j = 0; j < len; ++j)
       {
         if(iscntrl(c[j]))
         {
@@ -763,7 +760,7 @@ std::string editorPrompt(const std::string& prompt, void (*callback)(std::string
     else if(c == Term::Key::Esc)
     {
       editorSetStatusMessage("");
-      if(callback) callback(buf, c);
+      if(callback) { callback(buf, c); }
       return {};
     }
     else if(c == Term::Key::Enter)
@@ -771,7 +768,7 @@ std::string editorPrompt(const std::string& prompt, void (*callback)(std::string
       if(!buf.empty())
       {
         editorSetStatusMessage("");
-        if(callback) callback(buf, c);
+        if(callback) { callback(buf, c); }
         return buf;
       }
     }
@@ -788,7 +785,7 @@ void editorMoveCursor(const Term::Key& key)
   switch(key)
   {
     case Term::Key::ArrowLeft:
-      if(E.cx != 0) { E.cx--; }
+      if(E.cx != 0) { --E.cx; }
       else if(E.cy > 0)
       {
         E.cy--;
@@ -796,24 +793,24 @@ void editorMoveCursor(const Term::Key& key)
       }
       break;
     case Term::Key::ArrowRight:
-      if(row && E.cx < row->size) { E.cx++; }
+      if(row && E.cx < row->size) { ++E.cx; }
       else if(row && E.cx == row->size)
       {
-        E.cy++;
+        ++E.cy;
         E.cx = 0;
       }
       break;
     case Term::Key::ArrowUp:
-      if(E.cy != 0) { E.cy--; }
+      if(E.cy != 0) { --E.cy; }
       break;
     case Term::Key::ArrowDown:
-      if(E.cy < E.numrows) { E.cy++; }
+      if(E.cy < E.numrows) { ++E.cy; }
       break;
     default: return;
   }
 
-  row        = (E.cy >= E.numrows) ? nullptr : &E.row[E.cy];
-  int rowlen = row ? row->size : 0;
+  row                = (E.cy >= E.numrows) ? nullptr : &E.row[E.cy];
+  std::size_t rowlen = row ? row->size : 0;
   if(E.cx > rowlen) { E.cx = rowlen; }
 }
 
@@ -878,10 +875,10 @@ bool editorProcessKeypress()
           else if(key == Term::Key::PageDown)
           {
             E.cy = E.rowoff + E.screenrows - 1;
-            if(E.cy > E.numrows) E.cy = E.numrows;
+            if(E.cy > E.numrows) { E.cy = E.numrows; }
           }
 
-          int times = E.screenrows;
+          std::size_t times = E.screenrows;
           while(times--) { ::editorMoveCursor(key == Term::Key::PageUp ? Term::Key::ArrowUp : Term::Key::ArrowDown); }
           break;
         }
